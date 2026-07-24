@@ -14,7 +14,9 @@ npm run dev
 ```
 
 Keep real credentials and deployment identifiers out of commits. `wrangler.toml` is the public,
-sanitized configuration. Use the ignored `wrangler.production.toml` for a real deployment.
+sanitized configuration. Use the ignored `wrangler.production.toml` for a local deployment.
+Repository-connected Cloudflare builds generate the ignored `wrangler.generated.json` from the
+protected `EMAIL_KV_NAMESPACE_ID` build secret.
 
 Before opening a pull request, run:
 

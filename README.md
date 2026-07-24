@@ -14,8 +14,9 @@ All configured mailboxes share one encrypted account store within a deployment. 
 therefore intended for one owner or a small group of mutually trusted users. Do not grant
 Cloudflare Access to unrelated tenants or users who should not share mailbox access.
 
-The checked-in `wrangler.toml` is a sanitized example. Before deploying, copy it to the ignored
-production configuration and replace every placeholder with identifiers from your own accounts:
+The checked-in `wrangler.toml` is a sanitized example. For a local or manually initiated
+deployment, copy it to the ignored production configuration and replace every placeholder with
+identifiers from your own accounts:
 
 ```bash
 cp wrangler.toml wrangler.production.toml
@@ -23,6 +24,11 @@ cp wrangler.toml wrangler.production.toml
 
 Never commit `wrangler.production.toml`, `.dev.vars`, private keys, certificates, Worker secrets,
 mailbox credentials, or OAuth client secrets.
+
+For repository-connected Cloudflare builds, do not commit or upload
+`wrangler.production.toml`. The build generates an ignored `wrangler.generated.json` containing
+the real KV binding while preserving the runtime variables and secrets already configured in the
+Cloudflare dashboard. See [Cloudflare repository builds](#cloudflare-repository-builds).
 
 ## Tools
 
@@ -187,7 +193,15 @@ SMTP](https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protoco
 Create and fill `wrangler.production.toml` as described above. The public example intentionally
 cannot be deployed until its placeholder KV namespace and Access values are replaced.
 
-Generate and install a new production credential-encryption key without writing it to disk:
+For an existing deployment, first confirm the required secrets are present:
+
+```bash
+npx wrangler secret list --config wrangler.production.toml
+```
+
+Do not replace an existing `CREDENTIAL_ENCRYPTION_KEY`; existing encrypted account records depend
+on it. For a brand-new deployment with no stored accounts, generate and install the key without
+writing it to disk:
 
 ```bash
 CREDENTIAL_ENCRYPTION_KEY="$(openssl rand -base64 32)"
@@ -206,6 +220,29 @@ The production MCP endpoint is `https://<worker>.<subdomain>.workers.dev/mcp`.
 Open `https://<worker>.<subdomain>.workers.dev/` to manage email accounts through the
 Access-protected web interface. Credentials submitted there go directly from the browser to the
 Worker and do not pass through an MCP client or language model.
+
+## Cloudflare repository builds
+
+Cloudflare only receives files committed to the connected Git repository, so it cannot read the
+ignored local `wrangler.production.toml`. Configure the existing Worker as follows:
+
+1. Keep these runtime values under **Settings → Variables and Secrets**:
+    - Plaintext: `OUTLOOK_CLIENT_ID`, `OUTLOOK_TENANT`, `POLICY_AUD`, and `TEAM_DOMAIN`.
+    - Secret: `CREDENTIAL_ENCRYPTION_KEY` and `OUTLOOK_CLIENT_SECRET`.
+2. Under **Settings → Build → Variables and Secrets**, add one secret named
+   `EMAIL_KV_NAMESPACE_ID` containing the existing `EMAIL_KV` namespace ID.
+3. Set the deploy command to `npm run cloudflare:upload` for the first verification build. This
+   creates a version without promoting it to the active deployment.
+4. After verifying the uploaded version, change the deploy command to
+   `npm run cloudflare:deploy` to deploy successful `main` builds automatically.
+
+The repository includes `.node-version`, so Cloudflare uses the supported Node version without a
+separate build variable. The generated configuration sets `keep_vars: true`, omits `vars`, and
+declares the required secret names without supplying or replacing their values. It is written
+with owner-only file permissions and ignored by Git.
+
+Do not replace `CREDENTIAL_ENCRYPTION_KEY` on an existing deployment. Existing encrypted account
+records can only be read with the key that encrypted them.
 
 ## Account settings
 

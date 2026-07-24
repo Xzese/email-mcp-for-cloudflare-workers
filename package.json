@@ -22,6 +22,9 @@
 	},
 	"type": "module",
 	"scripts": {
+		"cloudflare:config": "node scripts/generate-cloudflare-config.mjs",
+		"cloudflare:deploy": "npm run cloudflare:config && wrangler deploy --config wrangler.generated.json",
+		"cloudflare:upload": "npm run cloudflare:config && wrangler versions upload --config wrangler.generated.json",
 		"deploy": "wrangler deploy --config wrangler.production.toml",
 		"dev": "wrangler dev",
 		"format": "oxfmt --write .",
