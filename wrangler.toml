@@ -1,0 +1,25 @@
+name = "email-mcp-server"
+main = "src/index.ts"
+compatibility_date = "2026-06-14"
+compatibility_flags = ["nodejs_compat"]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MyMCP"]
+
+[[durable_objects.bindings]]
+name = "MCP_OBJECT"
+class_name = "MyMCP"
+
+[[kv_namespaces]]
+binding = "EMAIL_KV"
+id = "replace-with-your-kv-namespace-id"
+
+[vars]
+TEAM_DOMAIN = "https://your-team.cloudflareaccess.com"
+POLICY_AUD = "replace-with-your-access-application-aud-tag"
+OUTLOOK_TENANT = "consumers"
+OUTLOOK_CLIENT_ID = "00000000-0000-0000-0000-000000000000"
+
+[observability]
+enabled = true

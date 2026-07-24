@@ -1,0 +1,61 @@
+{
+	"name": "email-mcp-server",
+	"version": "1.0.0",
+	"private": true,
+	"description": "A Cloudflare Workers MCP server for Gmail, Outlook, iCloud, and custom IMAP/SMTP accounts.",
+	"keywords": [
+		"cloudflare-workers",
+		"email",
+		"imap",
+		"mcp",
+		"model-context-protocol",
+		"smtp"
+	],
+	"homepage": "https://github.com/Xzese/email-mcp-server#readme",
+	"bugs": {
+		"url": "https://github.com/Xzese/email-mcp-server/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Xzese/email-mcp-server.git"
+	},
+	"type": "module",
+	"scripts": {
+		"deploy": "wrangler deploy --config wrangler.production.toml",
+		"dev": "wrangler dev",
+		"format": "oxfmt --write .",
+		"format:check": "oxfmt --check .",
+		"lint": "oxlint .",
+		"lint:fix": "oxlint --fix",
+		"start": "wrangler dev",
+		"test": "npm run type-check && node --test tests/*.test.ts",
+		"cf-typegen": "wrangler types --env-file .dev.vars.example --strict-vars=false",
+		"cf-typegen:check": "wrangler types --env-file .dev.vars.example --strict-vars=false --check",
+		"public-config:check": "node scripts/check-public-config.mjs",
+		"type-check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.29.0",
+		"agents": "^0.16.0",
+		"hono": "^4.12.32",
+		"jose": "^6.2.3",
+		"mailparser": "^3.9.14",
+		"zod": "^4.4.3"
+	},
+	"devDependencies": {
+		"@types/mailparser": "^3.4.6",
+		"oxfmt": "^0.54.0",
+		"oxlint": "^1.69.0",
+		"typescript": "6.0.3",
+		"wrangler": "^4.114.0"
+	},
+	"overrides": {
+		"body-parser": "2.3.0",
+		"brace-expansion": "5.0.8",
+		"fast-uri": "3.1.4"
+	},
+	"engines": {
+		"node": ">=22.18.0"
+	}
+}

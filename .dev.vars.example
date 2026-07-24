@@ -1,0 +1,5 @@
+CREDENTIAL_ENCRYPTION_KEY="replace-with-output-of-openssl-rand-base64-32"
+ACCESS_LOCAL_DEV="true"
+OUTLOOK_CLIENT_ID="your-microsoft-entra-application-client-id"
+OUTLOOK_CLIENT_SECRET="your-microsoft-entra-client-secret"
+OUTLOOK_TENANT="consumers"
