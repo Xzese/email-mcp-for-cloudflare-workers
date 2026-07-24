@@ -1,4 +1,4 @@
-# Native Email MCP Server on Cloudflare Workers
+# Email MCP Server for Cloudflare Workers
 
 A container-free remote MCP server for Gmail, Outlook, iCloud, and custom IMAP/SMTP accounts.
 
