@@ -229,8 +229,9 @@ ignored local `wrangler.production.toml`. Configure the existing Worker as follo
 1. Keep these runtime values under **Settings → Variables and Secrets**:
     - Plaintext: `OUTLOOK_CLIENT_ID`, `OUTLOOK_TENANT`, `POLICY_AUD`, and `TEAM_DOMAIN`.
     - Secret: `CREDENTIAL_ENCRYPTION_KEY` and `OUTLOOK_CLIENT_SECRET`.
-2. Under **Settings → Build → Variables and Secrets**, add one secret named
-   `EMAIL_KV_NAMESPACE_ID` containing the existing `EMAIL_KV` namespace ID.
+2. Under **Settings → Build → Variables and Secrets**, add a build environment variable named
+   `EMAIL_KV_NAMESPACE_ID`, set it to the existing `EMAIL_KV` namespace ID, and enable
+   **Encrypt**. Runtime variables from step 1 are not available to repository build commands.
 3. Set the deploy command to `npm run cloudflare:upload` for the first verification build. This
    creates a version without promoting it to the active deployment.
 4. After verifying the uploaded version, change the deploy command to
