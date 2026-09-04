@@ -40,7 +40,7 @@
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.29.0",
-		"agents": "^0.19.0",
+		"agents": "^0.22.0",
 		"hono": "^4.12.32",
 		"jose": "^6.2.4",
 		"mailparser": "^3.9.14",
