@@ -43,7 +43,7 @@
 		"agents": "^0.22.0",
 		"hono": "^4.13.5",
 		"jose": "^6.2.10",
-		"mailparser": "^3.9.14",
+		"mailparser": "^3.9.20",
 		"zod": "^4.5.4"
 	},
 	"devDependencies": {
