@@ -48,7 +48,7 @@
 	},
 	"devDependencies": {
 		"@types/mailparser": "^3.4.6",
-		"oxfmt": "^0.60.0",
+		"oxfmt": "^0.66.0",
 		"oxlint": "^1.80.0",
 		"typescript": "7.0.2",
 		"wrangler": "^4.114.0"
