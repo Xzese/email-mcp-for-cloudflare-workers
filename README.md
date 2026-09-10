@@ -4,6 +4,19 @@ A container-free remote MCP server for Gmail, Outlook, iCloud, and custom IMAP/S
 
 The Worker connects directly to IMAP and SMTP using Cloudflare outbound TCP sockets. Mailbox credentials are AES-256-GCM encrypted before being stored in Workers KV.
 
+## Table of contents
+
+- [Public source, private deployments](#public-source-private-deployments)
+- [Tools](#tools)
+- [Local setup](#local-setup)
+- [Cloudflare Access](#cloudflare-access)
+- [Microsoft Entra app registration for Outlook](#microsoft-entra-app-registration-for-outlook)
+- [Production secret and deployment](#production-secret-and-deployment)
+- [Connect ChatGPT](#connect-chatgpt)
+- [Cloudflare repository builds](#cloudflare-repository-builds)
+- [Account settings](#account-settings)
+- [Security](#security)
+
 ## Public source, private deployments
 
 This repository publishes the server source under the MIT License. It does not provide a shared,
@@ -220,6 +233,50 @@ The production MCP endpoint is `https://<worker>.<subdomain>.workers.dev/mcp`.
 Open `https://<worker>.<subdomain>.workers.dev/` to manage email accounts through the
 Access-protected web interface. Credentials submitted there go directly from the browser to the
 Worker and do not pass through an MCP client or language model.
+
+## Connect ChatGPT
+
+ChatGPT requires a deployed, publicly reachable MCP endpoint. It cannot connect directly to the
+local `http://localhost:8787/mcp` server. Before adding the app, complete the production deployment
+and Cloudflare Access setup above, then substitute your Worker hostname in:
+
+```text
+MCP server URL: https://<worker>.<subdomain>.workers.dev/mcp
+Account management URL: https://<worker>.<subdomain>.workers.dev/
+```
+
+On ChatGPT web, an administrator or owner can add this server as a custom MCP app (the UI may call
+these **Apps**, **Plugins**, or **Connectors**, depending on the plan and interface version):
+
+1. In the relevant ChatGPT workspace, open **Settings**. If your workspace exposes the control
+   under **Security & Login**, open **Connected Data** and enable **Developer mode** / **Create
+   custom MCP connectors**. Otherwise, enable it from **Settings → Apps → Advanced Settings**.
+   Enterprise and Edu workspaces may require an administrator to grant this permission first in
+   **Workspace Settings → Permissions & Roles → Connected Data**.
+2. Go to **Settings → Apps** (or **Workspace Settings → Apps**) and choose **Create** / **Add
+   custom app**. On interfaces that use a Plugins page, choose **Add custom plugin** instead.
+3. Enter a recognizable name such as `Email MCP Server`, and set the MCP server URL to
+   `https://<worker>.<subdomain>.workers.dev/mcp`. Do not use the account-management URL as the
+   MCP server URL; it is only for browser-based mailbox setup.
+4. Select **OAuth** if ChatGPT asks for an authentication type, then select **Scan Tools**.
+   Complete the Cloudflare Access sign-in and authorization screen in the browser. Cloudflare
+   Access Managed OAuth exposes its authorization and token endpoints through the MCP connection,
+   so do not enter mailbox passwords, Worker secrets, or Cloudflare credentials in ChatGPT.
+5. After the scan succeeds, create the app. It appears as a development app for testing. Open a
+   new chat, select or @mention the app, and try a read-only request such as “List my configured
+   email accounts.” Publish it from **Workspace Settings → Apps → Drafts** only after you have
+   reviewed its tools and access.
+
+Full MCP support for this server's mail-changing tools (drafting, sending, moving, flagging, and
+deleting) is currently available in ChatGPT Business, Enterprise, and Edu workspaces. ChatGPT Pro
+can use custom MCP apps in developer mode for read/fetch permissions only. ChatGPT may request
+confirmation before a tool changes mail.
+
+Only connect a Worker and Cloudflare Access application that you control and trust. This server
+shares one encrypted account store across authorized users, so its Access policy must only include
+people who are permitted to share those mailbox connections. See OpenAI's [Developer mode and MCP
+apps in ChatGPT](https://help.openai.com/en/articles/12584461-developer-mode-apps-and-full-mcp-connectors-in-chatgpt-beta)
+for the current plan requirements and UI details.
 
 ## Cloudflare repository builds
 
