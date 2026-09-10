@@ -4,6 +4,19 @@ A container-free remote MCP server for Gmail, Outlook, iCloud, and custom IMAP/S
 
 The Worker connects directly to IMAP and SMTP using Cloudflare outbound TCP sockets. Mailbox credentials are AES-256-GCM encrypted before being stored in Workers KV.
 
+## Table of contents
+
+- [Public source, private deployments](#public-source-private-deployments)
+- [Tools](#tools)
+- [Local setup](#local-setup)
+- [Cloudflare Access](#cloudflare-access)
+- [Microsoft Entra app registration for Outlook](#microsoft-entra-app-registration-for-outlook)
+- [Production secret and deployment](#production-secret-and-deployment)
+- [Connect ChatGPT](#connect-chatgpt)
+- [Cloudflare repository builds](#cloudflare-repository-builds)
+- [Account settings](#account-settings)
+- [Security](#security)
+
 ## Public source, private deployments
 
 This repository publishes the server source under the MIT License. It does not provide a shared,
@@ -220,6 +233,22 @@ The production MCP endpoint is `https://<worker>.<subdomain>.workers.dev/mcp`.
 Open `https://<worker>.<subdomain>.workers.dev/` to manage email accounts through the
 Access-protected web interface. Credentials submitted there go directly from the browser to the
 Worker and do not pass through an MCP client or language model.
+
+## Connect ChatGPT
+
+After deploying the Worker and configuring Cloudflare Access, add its MCP endpoint to ChatGPT:
+
+```text
+MCP server URL: https://<worker>.<subdomain>.workers.dev/mcp
+```
+
+1. Open **Settings → Security and login** and turn on **Developer mode**.
+2. Open **Settings → Plugins** and select **Add custom plugin**.
+3. Enter `Email MCP Server` as the name and
+   `https://<worker>.<subdomain>.workers.dev/mcp` as the server URL.
+4. Select **OAuth** if prompted, then select **Scan Tools** and complete the Cloudflare Access
+   sign-in.
+5. Select **Create**, then choose the plugin in a new chat.
 
 ## Cloudflare repository builds
 
