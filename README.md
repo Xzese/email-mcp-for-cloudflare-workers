@@ -245,16 +245,14 @@ MCP server URL: https://<worker>.<subdomain>.workers.dev/mcp
 Account management URL: https://<worker>.<subdomain>.workers.dev/
 ```
 
-On ChatGPT web, an administrator or owner can add this server as a custom MCP app (the UI may call
-these **Apps**, **Plugins**, or **Connectors**, depending on the plan and interface version):
+On ChatGPT web, add this server as a custom MCP app (the UI may call these **Apps**, **Plugins**,
+or **Connectors**, depending on the plan and interface version):
 
-1. In the relevant ChatGPT workspace, open **Settings**. If your workspace exposes the control
-   under **Security & Login**, open **Connected Data** and enable **Developer mode** / **Create
-   custom MCP connectors**. Otherwise, enable it from **Settings → Apps → Advanced Settings**.
-   Enterprise and Edu workspaces may require an administrator to grant this permission first in
-   **Workspace Settings → Permissions & Roles → Connected Data**.
-2. Go to **Settings → Apps** (or **Workspace Settings → Apps**) and choose **Create** / **Add
-   custom app**. On interfaces that use a Plugins page, choose **Add custom plugin** instead.
+1. Open **Settings → Security and login**, then turn on **Developer mode**. It is marked as an
+   elevated-risk setting because it permits unverified connectors that could change or permanently
+   erase data.
+2. Go to **Settings → Plugins** and choose **Add custom plugin**. If your interface uses an
+   **Apps** or **Connectors** page instead, choose **Create** / **Add custom app** there.
 3. Enter a recognizable name such as `Email MCP Server`, and set the MCP server URL to
    `https://<worker>.<subdomain>.workers.dev/mcp`. Do not use the account-management URL as the
    MCP server URL; it is only for browser-based mailbox setup.
@@ -266,6 +264,10 @@ these **Apps**, **Plugins**, or **Connectors**, depending on the plan and interf
    new chat, select or @mention the app, and try a read-only request such as “List my configured
    email accounts.” Publish it from **Workspace Settings → Apps → Drafts** only after you have
    reviewed its tools and access.
+
+Business, Enterprise, and Edu workspaces can restrict Developer mode. If the switch or add option
+is unavailable, ask a workspace administrator to grant access or create the custom app from
+**Workspace Settings → Apps**.
 
 Full MCP support for this server's mail-changing tools (drafting, sending, moving, flagging, and
 deleting) is currently available in ChatGPT Business, Enterprise, and Edu workspaces. ChatGPT Pro
