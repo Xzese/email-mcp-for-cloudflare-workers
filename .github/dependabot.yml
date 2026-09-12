@@ -4,9 +4,19 @@ updates:
       directory: /
       schedule:
           interval: weekly
+      groups:
+          npm-routine:
+              update-types:
+                  - minor
+                  - patch
       open-pull-requests-limit: 10
     - package-ecosystem: github-actions
       directory: /
       schedule:
           interval: weekly
+      groups:
+          github-actions-routine:
+              update-types:
+                  - minor
+                  - patch
       open-pull-requests-limit: 10
