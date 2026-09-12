@@ -1,0 +1,35 @@
+name: Dependabot auto-merge
+
+on:
+    pull_request_target:
+        types: [opened, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+    enable-auto-merge:
+        if: >-
+            github.event.pull_request.user.login == 'dependabot[bot]' &&
+            github.event.pull_request.head.repo.full_name == github.repository &&
+            github.event.pull_request.base.ref == 'main'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: write
+        steps:
+            # This reads Dependabot's API metadata and does not check out or execute PR code.
+            - name: Fetch Dependabot metadata
+              id: metadata
+              uses: dependabot/fetch-metadata@d7267f607e9d3fb96fc2fbe83e0af444713e90b7
+              with:
+                  github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+            - name: Enable squash auto-merge for routine updates
+              if: >-
+                  steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
+                  steps.metadata.outputs.update-type == 'version-update:semver-patch'
+              run: gh pr merge --auto --squash --match-head-commit "$HEAD_SHA" "$PR_URL"
+              env:
+                  GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+                  HEAD_SHA: "${{ github.event.pull_request.head.sha }}"
+                  PR_URL: "${{ github.event.pull_request.html_url }}"

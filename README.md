@@ -14,6 +14,7 @@ The Worker connects directly to IMAP and SMTP using Cloudflare outbound TCP sock
 - [Production secret and deployment](#production-secret-and-deployment)
 - [Connect ChatGPT](#connect-chatgpt)
 - [Cloudflare repository builds](#cloudflare-repository-builds)
+- [Dependency updates](#dependency-updates)
 - [Account settings](#account-settings)
 - [Security](#security)
 
@@ -273,6 +274,29 @@ with owner-only file permissions and ignored by Git.
 
 Do not replace `CREDENTIAL_ENCRYPTION_KEY` on an existing deployment. Existing encrypted account
 records can only be read with the key that encrypted them.
+
+## Dependency updates
+
+Dependabot checks npm packages and GitHub Actions weekly. Minor and patch updates are grouped into
+one pull request per ecosystem (`npm-routine` and `github-actions-routine`). Major updates remain
+individual pull requests and require manual review; the auto-merge workflow never selects them.
+
+For same-repository Dependabot pull requests targeting `main`, the workflow reads Dependabot's
+metadata without checking out or executing pull request code. It queues squash auto-merge only for
+minor and patch updates. GitHub merges the pull request after every required check and ruleset
+condition succeeds, using the current pull request head commit.
+
+Enable the following repository settings for this workflow:
+
+1. Under **Settings → General → Pull Requests**, enable **Allow auto-merge**.
+2. Configure the `main` ruleset to require branches to be up to date and these status checks:
+   `checks` (the `CI` workflow, GitHub Actions app ID `15368`) and
+   `Workers Builds: email-mcp-server` (Cloudflare app ID `85455`). Keep Cloudflare builds enabled
+   for Dependabot branches; a missing required check blocks merging.
+3. If the ruleset restricts who can update `main`, it must allow the GitHub Actions identity used
+   by the workflow to complete an approved auto-merge. Keep required checks enabled and do not use
+   a bypass actor for the Dependabot workflow. An admins-only update restriction can leave auto-merge
+   queued indefinitely.
 
 ## Account settings
 
