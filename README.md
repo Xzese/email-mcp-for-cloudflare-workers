@@ -1,5 +1,13 @@
 # Email MCP Server for Cloudflare Workers
 
+<p align="center">
+  <a href="https://github.com/Xzese/email-mcp-for-cloudflare-workers/stargazers"><img src="https://img.shields.io/github/stars/Xzese/email-mcp-for-cloudflare-workers?style=flat-square" alt="Stars"></a>
+  <a href="https://github.com/Xzese/email-mcp-for-cloudflare-workers/commits/main"><img src="https://img.shields.io/github/last-commit/Xzese/email-mcp-for-cloudflare-workers?style=flat-square" alt="Last commit"></a>
+  <a href="https://github.com/Xzese/email-mcp-for-cloudflare-workers"><img src="https://img.shields.io/github/languages/top/Xzese/email-mcp-for-cloudflare-workers?style=flat-square" alt="Top language"></a>
+  <a href="https://workers.cloudflare.com"><img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white" alt="Cloudflare Workers"></a>
+  <a href="https://github.com/Xzese/email-mcp-for-cloudflare-workers/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
+</p>
+
 A container-free remote MCP server for Gmail, Outlook, iCloud, and custom IMAP/SMTP accounts.
 
 The Worker connects directly to IMAP and SMTP using Cloudflare outbound TCP sockets. Mailbox credentials are AES-256-GCM encrypted before being stored in Workers KV.
