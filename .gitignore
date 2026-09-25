@@ -181,6 +181,7 @@ dist
 .DS_Store
 wrangler.production.toml
 wrangler.generated.json
+worker-configuration.d.ts
 wrangler.*.toml
 !wrangler.toml
 
