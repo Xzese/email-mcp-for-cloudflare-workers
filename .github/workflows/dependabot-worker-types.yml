@@ -1,7 +1,7 @@
 name: Refresh Worker types for Dependabot
 
 on:
-    pull_request:
+    pull_request_target:
         types: [opened, reopened, synchronize]
         branches: [main]
 
@@ -66,7 +66,7 @@ jobs:
         needs: generate
         runs-on: ubuntu-latest
         permissions:
-            contents: write
+            contents: read
 
         steps:
             - name: Download generated Worker types
@@ -100,7 +100,7 @@ jobs:
             - name: Update generated type file on Dependabot branch
               shell: bash
               env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GH_TOKEN: ${{ secrets.DEPENDABOT_WRITE_PAT }}
                   HEAD_REF: ${{ github.event.pull_request.head.ref }}
               run: |
                   set -euo pipefail
