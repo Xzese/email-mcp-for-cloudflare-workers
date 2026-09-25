@@ -86,6 +86,11 @@ npm install
 npm run dev
 ```
 
+Dependency installation generates `worker-configuration.d.ts` from the public Wrangler config
+using the installed Wrangler version. The generated file is ignored by Git and formatting tools.
+After changing `wrangler.toml`, or if you install with `--ignore-scripts`, run `npm run cf-typegen`
+before type checking or starting development.
+
 Connect an MCP client to `http://localhost:8787/mcp`.
 
 `ACCESS_LOCAL_DEV` bypasses Access verification only when the request hostname is `localhost`,
@@ -288,6 +293,10 @@ records can only be read with the key that encrypted them.
 Dependabot checks npm packages and GitHub Actions weekly. Minor and patch updates are grouped into
 one pull request per ecosystem (`npm-routine` and `github-actions-routine`). Major updates remain
 individual pull requests and require manual review; the auto-merge workflow never selects them.
+
+CI generates Worker types during `npm ci` and validates them with the updated dependencies.
+No workflow commits generated types to Dependabot branches, allowing Dependabot to keep rebasing
+and updating its pull requests automatically.
 
 For same-repository Dependabot pull requests targeting `main`, the workflow reads Dependabot's
 metadata without checking out or executing pull request code. It queues squash auto-merge only for
