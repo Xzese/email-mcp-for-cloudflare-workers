@@ -82,7 +82,6 @@ jobs:
                   fi
 
             - name: Update generated type file if needed
-              id: update
               shell: bash
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -91,7 +90,7 @@ jobs:
               run: |
                   set -euo pipefail
 
-                  gh api                     "repos/${GITHUB_REPOSITORY}/contents/worker-configuration.d.ts?ref=${HEAD_REF}"                     > current.json
+                  gh api "repos/${GITHUB_REPOSITORY}/contents/worker-configuration.d.ts?ref=${HEAD_REF}" > current.json
 
                   python <<'PY'
                   import base64
@@ -116,7 +115,7 @@ jobs:
                   PY
 
                   latest_sha="$(
-                    gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${HEAD_REF}"                       --jq '.object.sha'
+                    gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${HEAD_REF}" --jq '.object.sha'
                   )"
 
                   if [[ "${latest_sha}" != "${EXPECTED_HEAD_SHA}" ]]; then
@@ -124,20 +123,12 @@ jobs:
                     exit 1
                   fi
 
-                  if [[ -f no-update ]]; then
-                    echo "changed=false" >> "${GITHUB_OUTPUT}"
+                  if [[ ! -f no-update ]]; then
+                    gh api                       --method PUT                       "repos/${GITHUB_REPOSITORY}/contents/worker-configuration.d.ts"                       --input update.json                       >/dev/null
+                    echo "Updated worker-configuration.d.ts on ${HEAD_REF}."
+                  else
                     echo "Worker types are already current."
-                    exit 0
                   fi
-
-                  response="$(
-                    gh api                       --method PUT                       "repos/${GITHUB_REPOSITORY}/contents/worker-configuration.d.ts"                       --input update.json
-                  )"
-
-                  new_sha="$(jq -r '.commit.sha' <<<"${response}")"
-                  echo "changed=true" >> "${GITHUB_OUTPUT}"
-                  echo "commit_sha=${new_sha}" >> "${GITHUB_OUTPUT}"
-                  echo "Updated worker-configuration.d.ts on ${HEAD_REF}."
 
             - name: Dispatch CI on current Dependabot branch
               shell: bash
