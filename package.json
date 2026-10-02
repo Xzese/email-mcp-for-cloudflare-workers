@@ -40,19 +40,19 @@
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.30.0",
+		"@modelcontextprotocol/sdk": "^1.31.0",
 		"agents": "^0.24.0",
-		"hono": "^4.13.8",
+		"hono": "^4.13.10",
 		"jose": "^6.2.12",
-		"mailparser": "^3.9.28",
+		"mailparser": "^3.9.31",
 		"zod": "^4.6.5"
 	},
 	"devDependencies": {
 		"@types/mailparser": "^3.4.6",
-		"oxfmt": "^0.70.0",
-		"oxlint": "^1.85.0",
+		"oxfmt": "^0.71.0",
+		"oxlint": "^1.86.0",
 		"typescript": "7.0.2",
-		"wrangler": "^4.136.2"
+		"wrangler": "^4.143.0"
 	},
 	"overrides": {
 		"body-parser": "2.3.0",
