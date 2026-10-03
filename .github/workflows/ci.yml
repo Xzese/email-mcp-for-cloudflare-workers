@@ -25,6 +25,9 @@ jobs:
             - name: Install dependencies
               run: npm ci
 
+            - name: Check dependency compatibility
+              run: npm run dependencies:check
+
             - name: Check formatting
               run: npm run format:check
 
@@ -42,3 +45,6 @@ jobs:
 
             - name: Check public configuration
               run: npm run public-config:check
+
+            - name: Check Worker bundle without deploying
+              run: npm run build:check

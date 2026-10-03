@@ -21,12 +21,14 @@ protected `EMAIL_KV_NAMESPACE_ID` build secret.
 Before opening a pull request, run:
 
 ```bash
+npm run dependencies:check
 npm run format:check
 npm run lint
 npm run type-check
 npm test
 npm run cf-typegen:check
 npm run public-config:check
+npm run build:check
 ```
 
 MCP tool names, descriptions, schemas, annotations, and structured outputs are public interfaces.

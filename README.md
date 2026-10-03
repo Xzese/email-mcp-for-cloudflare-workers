@@ -294,9 +294,18 @@ Dependabot checks npm packages and GitHub Actions weekly. Minor and patch update
 one pull request per ecosystem (`npm-routine` and `github-actions-routine`). Major updates remain
 individual pull requests and require manual review; the auto-merge workflow never selects them.
 
+The MCP SDK is installed automatically from `agents`' required peer dependency and recorded in
+`package-lock.json`. Keep `agents` as the source of its compatible SDK version; adding an independent
+`@modelcontextprotocol/sdk` dependency can let Dependabot select a version that Agents does not
+support. Agents updates can bring a compatible SDK update through npm's peer dependency resolution.
+The repository enables strict peer dependency checking in `.npmrc`; do not bypass conflicts with
+`--force` or `--legacy-peer-deps`.
+
 CI generates Worker types during `npm ci` and validates them with the updated dependencies.
 No workflow commits generated types to Dependabot branches, allowing Dependabot to keep rebasing
-and updating its pull requests automatically.
+and updating its pull requests automatically. CI also checks the installed Agents/MCP dependency
+tree with `npm run dependencies:check` and bundles the Worker with `npm run build:check`. The bundle
+check uses the public Wrangler configuration without credentials and does not upload or deploy.
 
 For same-repository Dependabot pull requests targeting `main`, the workflow reads Dependabot's
 metadata without checking out or executing pull request code. It queues squash auto-merge only for
