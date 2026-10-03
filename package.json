@@ -32,6 +32,8 @@
 		"format:check": "oxfmt --check .",
 		"lint": "oxlint .",
 		"lint:fix": "oxlint --fix",
+		"dependencies:check": "npm ls agents @modelcontextprotocol/sdk",
+		"build:check": "wrangler deploy --dry-run --outdir dist",
 		"start": "wrangler dev",
 		"test": "npm run type-check && node --test tests/*.test.ts",
 		"cf-typegen": "wrangler types --env-file .dev.vars.example --strict-vars=false",
@@ -40,7 +42,6 @@
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.31.0",
 		"agents": "^0.24.0",
 		"hono": "^4.13.10",
 		"jose": "^6.2.12",
