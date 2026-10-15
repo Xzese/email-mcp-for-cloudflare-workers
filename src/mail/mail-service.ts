@@ -5,9 +5,11 @@ import type { AccountStore } from "./account-store";
 import type { MailAccount } from "./types";
 import { NativeImapSession } from "./native-imap";
 import { buildDraftMessage, NativeSmtpSession, type DraftInput } from "./native-smtp";
+import { configuredSender, isAccountAddress } from "./sender";
 
 interface CreateDraftInput extends Omit<DraftInput, "to" | "subject"> {
 	accountId?: string;
+	from?: string;
 	to?: string | string[];
 	subject?: string;
 	replyToMessage?: {
@@ -362,6 +364,7 @@ export class MailService {
 
 	async createDraft(input: CreateDraftInput) {
 		const account = await this.authorizedAccount(input.accountId);
+		const from = configuredSender(account, input.from);
 		let draftInput: DraftInput;
 		if (input.replyToMessage) {
 			const parsed = await this.parsedMessage(
@@ -372,7 +375,7 @@ export class MailService {
 			const primary = input.to
 				? list(input.to)
 				: addressList(parsed.replyTo ?? parsed.from).filter(
-						(address) => normalizeAddress(address) !== normalizeAddress(account.email),
+						(address) => !isAccountAddress(account, address),
 					);
 			if (primary.length === 0) throw new Error("The original message has no reply address");
 			const copied = input.cc
@@ -383,7 +386,7 @@ export class MailService {
 							...addressList(parsed.cc),
 						]).filter(
 							(address) =>
-								normalizeAddress(address) !== normalizeAddress(account.email) &&
+								!isAccountAddress(account, address) &&
 								!primary.some(
 									(recipient) =>
 										normalizeAddress(recipient) === normalizeAddress(address),
@@ -407,15 +410,16 @@ export class MailService {
 			if (input.subject === undefined) throw new Error("Provide subject for a new draft");
 			draftInput = { ...input, to: input.to, subject: input.subject };
 		}
-		const draft = buildDraftMessage(account.email, draftInput);
+		const draft = buildDraftMessage(from, draftInput);
 		const location = await this.withImap(input.accountId, (session) =>
 			session.createDraft(draft.source, draft.messageId),
 		);
-		return { accountId: account.id, ...location, messageId: draft.messageId };
+		return { accountId: account.id, ...location, messageId: draft.messageId, from };
 	}
 
 	async createForwardDraft(input: {
 		accountId?: string;
+		from?: string;
 		folder: string;
 		uid: number;
 		to: string | string[];
@@ -432,6 +436,7 @@ export class MailService {
 		const includeBothFormats = input.text === undefined && input.html === undefined;
 		return this.createDraft({
 			accountId: input.accountId,
+			from: input.from,
 			to: input.to,
 			cc: input.cc,
 			bcc: input.bcc,
@@ -451,6 +456,7 @@ export class MailService {
 
 	async editDraft(input: {
 		accountId?: string;
+		from?: string;
 		folder: string;
 		uid: number;
 		to?: string | string[];
@@ -468,7 +474,16 @@ export class MailService {
 			if (!existing.flags.some((flag) => flag.toLowerCase() === "\\draft"))
 				throw new Error(`Message UID ${input.uid} is not marked as an IMAP draft`);
 			const parsed = await simpleParser(Buffer.from(existing.source));
-			const draft = buildDraftMessage(account.email, {
+			const existingFrom = parsed.from?.value;
+			if (
+				input.from === undefined &&
+				(existingFrom?.length !== 1 || !existingFrom[0].address)
+			)
+				throw new Error(
+					"Draft must have exactly one From address; set from explicitly to repair it",
+				);
+			const from = configuredSender(account, input.from ?? existingFrom?.[0].address);
+			const draft = buildDraftMessage(from, {
 				to: input.to ?? addressList(parsed.to),
 				cc: input.cc ?? optionalAddresses(parsed.cc),
 				bcc: input.bcc ?? optionalAddresses(parsed.bcc),
@@ -491,6 +506,7 @@ export class MailService {
 				replaced: { folder: input.folder, uid: input.uid },
 				...location,
 				messageId: draft.messageId,
+				from,
 			};
 		});
 	}

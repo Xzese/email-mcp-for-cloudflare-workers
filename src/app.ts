@@ -3,6 +3,7 @@ import { createRemoteJWKSet, decodeJwt, jwtVerify } from "jose";
 import { openJson, sealJson } from "./crypto";
 import { AccountStore } from "./mail/account-store";
 import { MailService } from "./mail/mail-service";
+import { senderSettings } from "./mail/sender";
 import type { AccountAuth, MailAccount, MailEnv } from "./mail/types";
 import {
 	assertValidOutlookOAuthCallback,
@@ -196,6 +197,14 @@ app.post("/accounts/:id/update", async (c) => {
 		const form = await c.req.formData();
 		const existing = await store.get(c.req.param("id"));
 		account = { id: existing.id, ...accountInput(form, existing.auth) };
+		if (
+			account.email === existing.email &&
+			JSON.stringify(account.imap) === JSON.stringify(existing.imap) &&
+			JSON.stringify(account.smtp) === JSON.stringify(existing.smtp)
+		) {
+			await store.update(account);
+			return c.redirect("/?status=updated", 303);
+		}
 	} catch (error) {
 		const accounts = await store.list().catch(() => []);
 		const editAccount = accounts.find((account) => account.id === c.req.param("id"));
@@ -574,6 +583,8 @@ function managementPage(
 								${account.smtp ? `<div><dt>SMTP security</dt><dd>${account.smtp.secure ? "Implicit TLS" : "STARTTLS"}</dd></div>` : ""}
 								<div><dt>Can send</dt><dd>${account.smtp ? "Yes" : "No"}</dd></div>
 								<div><dt>Authentication</dt><dd>${account.auth.type === "oauth2" ? "OAuth 2.0" : "Password"}</dd></div>
+								<div><dt>Default From</dt><dd>${escapeHtml(account.defaultFrom ?? account.email)}</dd></div>
+								<div><dt>Aliases</dt><dd>${escapeHtml(account.aliases?.join(", ") || "None configured")}</dd></div>
 							</dl>
 						</details>
 					</li>`,
@@ -766,8 +777,12 @@ function accountEditor(
 			</div>
 			<div id="manual-account-fields">
 			<div class="fields">
-				<label class="full">Email address<input name="email" type="email" value="${escapeHtml(formAccount?.email ?? "")}" required maxlength="320" autocomplete="username"></label>
+				<label class="full">Login email address<input name="email" type="email" value="${escapeHtml(formAccount?.email ?? "")}" required maxlength="320" autocomplete="username"></label>
 			</div>
+			<fieldset><legend>Sender addresses</legend><div class="fields">
+				<label class="full">Email aliases<input name="aliases" value="${escapeHtml(formAccount?.aliases?.join(", ") ?? "")}" placeholder="alias@icloud.com, alias@outlook.com" autocomplete="off"></label>
+				<label class="full">Default From address<input name="defaultFrom" type="email" value="${escapeHtml(formAccount?.defaultFrom ?? "")}" placeholder="Defaults to login email address" maxlength="320" autocomplete="off"></label>
+			</div><p class="help">Enter aliases for this mailbox separated by commas. The default From must be the login email or one of these aliases. Only add addresses your provider already allows this account to send from. These settings apply to new drafts and replies; existing drafts keep their saved sender.</p></fieldset>
 			<fieldset><legend>Incoming mail (IMAP)</legend><div class="fields server-fields">
 				<label>Host<input name="imapHost" id="imap-host" value="${escapeHtml(formAccount?.imap.host ?? "")}" required></label>
 				<label>Port<input name="imapPort" id="imap-port" type="number" min="1" max="65535" value="${formAccount?.imap.port ?? ""}" placeholder="993" required></label>
@@ -794,10 +809,10 @@ function accountEditor(
 			}
 			</div>
 			<div class="form-actions">
-				<button class="submit" id="account-submit" type="submit">${existingAccount ? "Test and save changes" : "Test and save account"}</button>
+				<button class="submit" id="account-submit" type="submit">${existingAccount ? "Save changes" : "Test and save account"}</button>
 				${editing ? '<a class="cancel-link" href="/">Cancel</a>' : '<button class="secondary" type="button" data-dialog-close>Cancel</button>'}
 			</div>
-			<p class="help" id="account-help">${pendingChange ? "Change the connection details and test again. The stored pending credential is never returned to the page." : editing ? "Changing the email address also changes the username used for IMAP and SMTP authentication." : "Use an app-specific password for Gmail or iCloud. Passwords and tokens are never displayed after saving."}</p>
+			<p class="help" id="account-help">${pendingChange ? "Change the connection details and test again. The stored pending credential is never returned to the page." : editing ? "Changing the login email changes the IMAP and SMTP username. Use Default From to change your sender instead. Connection changes are tested before saving; sender-only changes keep your credentials and need no connection test." : "Use an app-specific password for Gmail or iCloud. Passwords and tokens are never displayed after saving."}</p>
 			</div>
 		</form>
 	</section>
@@ -999,9 +1014,19 @@ function accountInput(form: FormData, existingAuth?: AccountAuth): Omit<MailAcco
 						}
 					: fail("Select a supported authentication type");
 	}
+	const email = validEmail(required(form, "email"));
+	const settings = senderSettings({
+		email,
+		aliases: value(form, "aliases")
+			.split(/[,;\n]+/)
+			.map((alias) => alias.trim())
+			.filter(Boolean),
+		defaultFrom: optional(form, "defaultFrom"),
+	});
 	return {
 		name: validName(required(form, "name")),
-		email: validEmail(required(form, "email")),
+		email,
+		...settings,
 		imap: {
 			host: validHost(required(form, "imapHost"), "IMAP host"),
 			port: validPort(required(form, "imapPort"), "IMAP port"),

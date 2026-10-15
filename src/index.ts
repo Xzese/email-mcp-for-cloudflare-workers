@@ -7,6 +7,7 @@ import { accessRejection } from "./access";
 import app from "./app";
 import { AccountStore } from "./mail/account-store";
 import { MailService } from "./mail/mail-service";
+import { senderSettings } from "./mail/sender";
 import type { MailEnv } from "./mail/types";
 import { observeTool } from "./observability";
 
@@ -44,6 +45,37 @@ const replyToSchema = z
 	.string()
 	.email()
 	.describe("Optional Reply-To email address to include on the draft for recipient replies.");
+
+const senderInputs = {
+	aliases: z
+		.array(z.string().email())
+		.optional()
+		.describe(
+			"Additional email addresses already authorized to send through this provider account, such as iCloud or Outlook aliases. Replaces the entire local alias list when supplied; [] removes all aliases. Does not create provider aliases. Omit to preserve existing aliases on update.",
+		),
+	defaultFrom: z
+		.string()
+		.email()
+		.optional()
+		.describe(
+			"Default From address for new drafts and replies; must be the account login email or one of aliases. Omit to use the login email on add or preserve the current default on update. Set to the login email to reset it. Does not change the login username or the provider's default sender.",
+		),
+};
+
+const senderOutput = {
+	aliases: z
+		.array(z.string())
+		.describe("Configured additional sending addresses; excludes the login email."),
+	defaultFrom: z.string().describe("Effective default From address for new drafts and replies."),
+};
+
+const draftFromSchema = z
+	.string()
+	.email()
+	.optional()
+	.describe(
+		"Optional From address: use the account email or an alias returned by email_list_accounts. New drafts and replies default to defaultFrom; draft updates preserve the existing From when omitted. Configure aliases or change the default with email_update_account_sender first. This is distinct from replyTo.",
+	);
 
 const uidSchema = z.union([
 	z.number().int().positive(),
@@ -109,6 +141,7 @@ const multiAccountSearchOutput = {
 };
 
 const draftLocationOutput = {
+	from: z.string().describe("From address saved in this draft and used when sending it."),
 	accountId: z.string(),
 	folder: z.string(),
 	uid: z.number().int(),
@@ -146,7 +179,7 @@ export class MyMCP extends McpAgent<MailEnv> {
 			"email_add_account",
 			{
 				description:
-					"Add, configure, or connect a Gmail, Outlook, iCloud, or custom IMAP email account. Stores encrypted credentials and returns the new account ID and send capabilities. IMAP is required; SMTP is optional. Do not use to search, read, move, send, or delete messages.",
+					"Add, configure, or connect a Gmail, Outlook, iCloud, or custom IMAP email account. Stores encrypted credentials and returns the new account ID, login email, aliases, defaultFrom, and send capabilities. aliases must already be authorized at the provider; defaultFrom changes only this MCP server’s sender setting. IMAP is required; SMTP is optional. Do not use to search, read, move, send, or delete messages.",
 				inputSchema: {
 					name: z
 						.string()
@@ -156,7 +189,10 @@ export class MyMCP extends McpAgent<MailEnv> {
 					email: z
 						.string()
 						.email()
-						.describe("Email address for this configured account."),
+						.describe(
+							"Login email address used for IMAP/SMTP authentication; use aliases and defaultFrom to send from another authorized address.",
+						),
+					...senderInputs,
 					imapHost: z.string().describe("IMAP host used to read folders and messages."),
 					imapPort: z.number().int().default(993).describe("IMAP port; defaults to 993."),
 					imapSecure: z
@@ -211,6 +247,7 @@ export class MyMCP extends McpAgent<MailEnv> {
 					id: z.string(),
 					name: z.string(),
 					email: z.string(),
+					...senderOutput,
 					capabilities: capabilitiesOutput,
 				},
 				annotations: titled("Add Email Account", localWrite),
@@ -225,6 +262,8 @@ export class MyMCP extends McpAgent<MailEnv> {
 					const account = await store.add({
 						name: input.name,
 						email: input.email,
+						aliases: input.aliases,
+						defaultFrom: input.defaultFrom,
 						imap: {
 							host: input.imapHost,
 							port: input.imapPort,
@@ -252,6 +291,7 @@ export class MyMCP extends McpAgent<MailEnv> {
 						id: account.id,
 						name: account.name,
 						email: account.email,
+						...senderSettings(account),
 						capabilities: {
 							imap: true,
 							smtp: Boolean(account.smtp),
@@ -265,7 +305,7 @@ export class MyMCP extends McpAgent<MailEnv> {
 			"email_list_accounts",
 			{
 				description:
-					"List, show, or lookup configured email accounts. Returns account IDs, names, email addresses, connection settings, auth type, and whether sending is available without exposing credentials. Use this before tools that require accountId. Do not use to search or read messages.",
+					"List, show, or lookup configured email accounts. Returns account IDs, names, login email addresses, aliases, defaultFrom, connection settings, auth type, and whether sending is available without exposing credentials. Use this before tools that require accountId. Use email_update_account_sender to change aliases or the default From address without changing login credentials. Do not use to search or read messages.",
 				inputSchema: {},
 				outputSchema: {
 					accounts: z.array(
@@ -273,6 +313,7 @@ export class MyMCP extends McpAgent<MailEnv> {
 							id: z.string(),
 							name: z.string(),
 							email: z.string(),
+							...senderOutput,
 							imap: serverConfigOutput,
 							smtp: serverConfigOutput.optional(),
 							capabilities: capabilitiesOutput,
@@ -285,20 +326,48 @@ export class MyMCP extends McpAgent<MailEnv> {
 			async () =>
 				observeTool("email_list_accounts", async () => {
 					const accounts = await store.list();
-					const result = accounts.map(({ id, name, email, imap, smtp, auth }) => ({
-						id,
-						name,
-						email,
-						imap,
-						smtp,
-						capabilities: {
-							imap: true,
-							smtp: Boolean(smtp),
-							canSend: Boolean(smtp),
-						},
-						authType: auth.type,
-					}));
+					const result = accounts.map(
+						({ id, name, email, aliases, defaultFrom, imap, smtp, auth }) => ({
+							id,
+							name,
+							email,
+							...senderSettings({ email, aliases, defaultFrom }),
+							imap,
+							smtp,
+							capabilities: {
+								imap: true,
+								smtp: Boolean(smtp),
+								canSend: Boolean(smtp),
+							},
+							authType: auth.type,
+						}),
+					);
 					return text(result, { accounts: result });
+				}),
+		);
+
+		this.server.registerTool(
+			"email_update_account_sender",
+			{
+				description:
+					"Change, update, or reset an account's email address aliases and default From address using accountId from email_list_accounts. Returns accountId, login email, aliases, and effective defaultFrom. Side effect: updates only this MCP server's local encrypted sender configuration; does not change login credentials, create provider aliases, change provider settings, modify existing drafts, or send mail. Addresses must already be authorized at the provider. Use before draft creation to change the default; use email_update_message_draft with from to change an existing draft's sender.",
+				inputSchema: { ...accountSelector, ...senderInputs },
+				outputSchema: { accountId: z.string(), email: z.string(), ...senderOutput },
+				annotations: titled(
+					"Update Account Sender",
+					annotations(false, false, true, false),
+				),
+			},
+			async ({ accountId, aliases, defaultFrom }) =>
+				observeTool("email_update_account_sender", async () => {
+					if (aliases === undefined && defaultFrom === undefined)
+						throw new Error("Provide aliases or defaultFrom to update sender settings");
+					return text(
+						await store.updateSender(accountId, {
+							...(aliases !== undefined ? { aliases } : {}),
+							...(defaultFrom !== undefined ? { defaultFrom } : {}),
+						}),
+					);
 				}),
 		);
 
@@ -1074,9 +1143,10 @@ export class MyMCP extends McpAgent<MailEnv> {
 			["email_create_message_draft"],
 			{
 				description:
-					"Compose, create, or prepare a new email draft or reply draft without sending it. For a reply, provide replyToMessage with the original folder and IMAP UID; for a new message, provide to, subject, and text or HTML. Side effect: creates a draft in the IMAP Drafts folder and returns draft folder, IMAP UID, and Message-ID. Do not use to send; use email_send_draft after reviewing or updating the draft.",
+					"Compose, create, or prepare a new email draft or reply draft without sending it. For a reply, provide replyToMessage with the original folder and IMAP UID; for a new message, provide to, subject, and text or HTML. Side effect: creates a draft in the IMAP Drafts folder and returns the selected From address, draft folder, IMAP UID, and Message-ID. Uses defaultFrom from email_list_accounts unless from selects another configured alias. Do not use to send; use email_send_draft after reviewing or updating the draft.",
 				inputSchema: {
 					...accountSelector,
+					from: draftFromSchema,
 					to: recipientSchema
 						.optional()
 						.describe(
@@ -1161,9 +1231,10 @@ export class MyMCP extends McpAgent<MailEnv> {
 			["email_create_forward_draft"],
 			{
 				description:
-					"Create, compose, or prepare a forward draft from one existing message without sending it. Requires source folder and IMAP UID returned by search/get/thread results plus destination recipients. Side effect: creates a new draft in the IMAP Drafts folder, optionally copying original attachments. Do not use to send; use email_send_draft after draft creation.",
+					"Create, compose, or prepare a forward draft from one existing message without sending it. Requires source folder and IMAP UID returned by search/get/thread results plus destination recipients. Side effect: creates a new draft in the IMAP Drafts folder, optionally copying original attachments, and returns From address, draft folder, IMAP UID, and Message-ID. Uses defaultFrom unless from selects another configured alias. Do not use to send; use email_send_draft after draft creation.",
 				inputSchema: {
 					...accountSelector,
+					from: draftFromSchema,
 					folder: z
 						.string()
 						.default("INBOX")
@@ -1219,9 +1290,10 @@ export class MyMCP extends McpAgent<MailEnv> {
 			["email_update_message_draft"],
 			{
 				description:
-					"Edit, update, or replace an existing IMAP draft without sending it. Requires draft folder and draft IMAP UID returned by email_create_message_draft, email_create_forward_draft, email_update_message_draft, or search results for drafts. Side effect: replaces the draft and returns a new draft folder and IMAP UID. Do not use for non-draft messages or to send; use email_send_draft to send.",
+					"Edit, update, or replace an existing IMAP draft without sending it. Requires draft folder and draft IMAP UID returned by email_create_message_draft, email_create_forward_draft, email_update_message_draft, or search results for drafts. Side effect: replaces the draft and returns its From address, Message-ID, new draft folder, and IMAP UID. Omitted from preserves the existing sender; set from to change it to an address from email_list_accounts. Do not use for non-draft messages or to send; use email_send_draft to send.",
 				inputSchema: {
 					...accountSelector,
+					from: draftFromSchema,
 					folder: z
 						.string()
 						.describe("Exact IMAP Drafts folder path containing the draft."),
@@ -1278,7 +1350,7 @@ export class MyMCP extends McpAgent<MailEnv> {
 			["email_send_draft"],
 			{
 				description:
-					"Send an existing draft email using SMTP. Requires draft folder and draft IMAP UID returned by email_create_message_draft, email_create_forward_draft, or email_update_message_draft. Side effects: sends the message, appends a copy to the IMAP Sent folder when possible, and deletes the draft after SMTP accepts it. Do not use to compose or edit a draft.",
+					"Send an existing draft email using SMTP with its saved From address as the SMTP sender; the address must still be configured on the account. Returns the From address, accepted/rejected recipients, message ID when available, and sent-copy/draft-cleanup status. Changing defaultFrom does not change existing drafts; use email_update_message_draft with from first when needed. Requires draft folder and draft IMAP UID returned by email_create_message_draft, email_create_forward_draft, or email_update_message_draft. Side effects: sends the message, appends a copy to the IMAP Sent folder when possible, and deletes the draft after SMTP accepts it. Do not use to compose or edit a draft.",
 				inputSchema: {
 					...accountSelector,
 					folder: z
@@ -1294,6 +1366,7 @@ export class MyMCP extends McpAgent<MailEnv> {
 				},
 				outputSchema: {
 					messageId: z.string().optional(),
+					from: z.string().describe("From address used for SMTP sending."),
 					accepted: z.array(z.string()),
 					rejected: z.array(z.string()),
 					accountId: z.string(),
