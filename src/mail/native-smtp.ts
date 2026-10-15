@@ -1,5 +1,8 @@
 import { connect } from "cloudflare:sockets";
 import type { MailAccount, ServerConfig } from "./types";
+import { simpleParser } from "mailparser";
+import { Buffer } from "node:buffer";
+import { configuredSender } from "./sender";
 
 export { buildDraftMessage, type DraftInput } from "./mime";
 
@@ -27,6 +30,10 @@ export class NativeSmtpSession {
 	}
 
 	async sendRaw(source: Uint8Array) {
+		const parsed = await simpleParser(Buffer.from(source));
+		if (parsed.from?.value.length !== 1 || !parsed.from.value[0].address)
+			throw new Error("Draft must have exactly one configured From address");
+		const from = configuredSender(this.account, parsed.from.value[0].address);
 		const raw = new TextDecoder().decode(source);
 		const headers = parseHeaders(raw);
 		const recipients = [headers.to, headers.cc, headers.bcc]
@@ -37,14 +44,14 @@ export class NativeSmtpSession {
 		await this.open();
 		try {
 			await this.handshakeAndAuthenticate();
-			await this.command(`MAIL FROM:<${this.account.email}>`, [250]);
+			await this.command(`MAIL FROM:<${from}>`, [250]);
 			for (const recipient of recipients)
 				await this.command(`RCPT TO:<${recipient}>`, [250, 251]);
 			await this.command("DATA", [354]);
 			const outgoing = stripBcc(raw).trimEnd().replace(/^\./gm, "..");
 			await this.write(`${outgoing}\r\n.\r\n`);
 			await this.expect(undefined, [250]);
-			return { messageId, accepted: recipients, rejected: [] as string[] };
+			return { messageId, from, accepted: recipients, rejected: [] as string[] };
 		} finally {
 			await this.quit();
 		}

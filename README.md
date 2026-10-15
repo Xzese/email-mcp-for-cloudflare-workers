@@ -54,7 +54,7 @@ Cloudflare dashboard. See [Cloudflare repository builds](#cloudflare-repository-
 
 ## Tools
 
-- `email_add_account`, `email_list_accounts`, `email_remove_account`
+- `email_add_account`, `email_list_accounts`, `email_update_account_sender`, `email_remove_account`
 - `email_test_connection`
 - `email_list_folders`, `email_get_mailbox_status`, `email_get_all_account_mailbox_statuses`
 - `email_search_messages`, `email_search_all_accounts`, `email_list_all_inbox_messages`, `email_get_message`, `email_get_message_thread`, `email_get_message_attachment`
@@ -330,6 +330,34 @@ Prefer the web management interface at the Worker root to add, edit, or remove a
 can change the display name, email address, IMAP/SMTP hosts, ports, and TLS modes without replacing
 the stored password or OAuth tokens. The `email_add_account` tool remains available for clients
 that explicitly need programmatic setup.
+To use an iCloud or Outlook alias, choose **Edit**, leave **Login email address** as the address
+used to authenticate, enter the mailbox's authorized addresses in **Email aliases** (comma
+separated), and set **Default From address** to the address you want to send from. Leaving
+Default From blank uses the login email. Sender-only changes save without a connection test or
+replacing credentials. Existing accounts continue using their login email until you change this.
+
+For MCP clients, call `email_list_accounts` to get the account ID, login `email`, `aliases`, and
+`defaultFrom`. Then use `email_update_account_sender`, for example:
+
+```json
+{
+	"accountId": "account-id-from-email_list_accounts",
+	"aliases": ["personal@icloud.com", "work@icloud.com"],
+	"defaultFrom": "personal@icloud.com"
+}
+```
+
+The same `aliases` and `defaultFrom` fields are available on `email_add_account`. Updating aliases
+replaces the entire list; omitted settings are preserved. Set `defaultFrom` to the login email to
+reset it. To remove all aliases, supply `aliases: []` and reset the default in the same call if it
+currently uses an alias. Addresses are matched without regard to case and duplicates are removed.
+These tools only configure this MCP server: they do not create aliases at the provider or sync
+the provider's default sender automatically. First enable the address with your provider; see
+[Apple's iCloud alias settings](https://support.apple.com/guide/icloud/mm6b1a490a/icloud).
+Exchange Online administrators may need to enable sending from aliases; see
+[Microsoft's send-from-alias guidance](https://techcommunity.microsoft.com/blog/exchange/sending-from-email-aliases-%E2%80%93-general-availability/4562543).
+The provider can still reject or rewrite a From address according to its own configuration.
+
 Each configured account also has a **Test connection** action that authenticates with its stored
 credentials and reports the connection result without exposing those credentials to the browser.
 
@@ -388,6 +416,15 @@ IMAP Archive folder, or the provider all-mail folder when that is the advertised
 Use `email_move_messages_to_trash` for normal deletion; it moves up to 100 messages to the folder advertised with
 the IMAP `\Trash` special-use flag. `email_delete_messages_permanently` permanently marks and expunges up to 100
 messages by IMAP UID and should only be used when permanent deletion is intended.
+
+Draft creation (including replies and forwards) uses `defaultFrom` unless you supply `from` to
+select the login email or a configured alias. All draft tools return the saved `from` address.
+`email_update_message_draft` preserves it when `from` is omitted and lets you change it explicitly.
+Changing the default affects new drafts only. SMTP uses the draft's saved From for its envelope
+sender while authenticating with the login email and existing credentials. A sender removed from
+the configured addresses cannot be sent until you update the draft or add the alias again.
+Automatically derived reply and reply-all recipients exclude the login email and all configured
+aliases; explicit recipient overrides are respected.
 
 Sending is a two-step workflow: call `email_create_message_draft`, then pass its returned `folder` and
 IMAP UID field `uid` to `email_send_draft`. After SMTP accepts the message, the server appends a copy to the IMAP Sent

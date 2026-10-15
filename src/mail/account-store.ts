@@ -1,5 +1,6 @@
 import type { MailAccount } from "./types";
-import { decrypt, encrypt } from "../crypto";
+import { decrypt, encrypt } from "../crypto.ts";
+import { senderSettings } from "./sender.ts";
 
 const STORAGE_KEY = "mail/accounts/v1";
 
@@ -30,7 +31,7 @@ export class AccountStore {
 
 	async add(account: Omit<MailAccount, "id">): Promise<MailAccount> {
 		const accounts = await this.list();
-		const created = { ...account, id: crypto.randomUUID() };
+		const created = { ...account, ...senderSettings(account), id: crypto.randomUUID() };
 		accounts.push(created);
 		await this.save(accounts);
 		return created;
@@ -40,8 +41,18 @@ export class AccountStore {
 		const accounts = await this.list();
 		const index = accounts.findIndex((candidate) => candidate.id === account.id);
 		if (index < 0) throw new Error(`Account ${account.id} not found`);
-		accounts[index] = account;
+		accounts[index] = { ...account, ...senderSettings(account) };
 		await this.save(accounts);
+	}
+
+	async updateSender(
+		id: string | undefined,
+		input: { aliases?: string[]; defaultFrom?: string },
+	) {
+		const account = await this.get(id);
+		const settings = senderSettings({ ...account, ...input });
+		await this.update({ ...account, ...settings });
+		return { accountId: account.id, email: account.email, ...settings };
 	}
 
 	async remove(id: string): Promise<void> {
