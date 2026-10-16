@@ -42,18 +42,18 @@
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"agents": "^0.26.0",
+		"agents": "^0.28.0",
 		"hono": "^4.13.13",
 		"jose": "^6.2.12",
-		"mailparser": "^3.9.36",
-		"zod": "^4.6.5"
+		"mailparser": "^3.9.38",
+		"zod": "^4.6.7"
 	},
 	"devDependencies": {
 		"@types/mailparser": "^3.9.0",
 		"oxfmt": "^0.72.0",
 		"oxlint": "^1.87.0",
 		"typescript": "7.0.2",
-		"wrangler": "^4.147.0"
+		"wrangler": "^4.149.0"
 	},
 	"overrides": {
 		"body-parser": "2.3.0",
