@@ -40,6 +40,9 @@ jobs:
             - name: Test
               run: npm test
 
+            - name: Check bounded dependency retry and stale reporting
+              run: python3 -m unittest discover -s .github/scripts -p 'test_dependency_health.py'
+
             - name: Check generated Worker types
               run: npm run cf-typegen:check
 

@@ -1,0 +1,57 @@
+name: Dependency health
+
+on:
+    workflow_run:
+        workflows: [CI]
+        types: [completed]
+    schedule:
+        - cron: "37 8 * * *"
+    workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+    group: dependency-health-${{ github.event.workflow_run.id || github.event_name }}
+    cancel-in-progress: false
+
+jobs:
+    retry-transient:
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        permissions:
+            contents: read
+            pull-requests: read
+            actions: write
+        steps:
+            # Only trusted default-branch code runs with the actions write token.
+            # Never check out the PR head, download its artifacts, or execute its logs.
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: ${{ github.event.repository.default_branch }}
+                  persist-credentials: false
+                  sparse-checkout: .github/scripts
+            - run: python3 .github/scripts/dependency_health.py retry
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    report-blocked:
+        if: github.event_name != 'workflow_run'
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        permissions:
+            contents: read
+            pull-requests: read
+            actions: read
+            checks: read
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: ${{ github.event.repository.default_branch }}
+                  persist-credentials: false
+                  sparse-checkout: .github/scripts
+            # A stale PR produces an Actions summary and a failed scheduled job,
+            # using normal repository workflow notifications; no comments or issues.
+            - run: python3 .github/scripts/dependency_health.py report
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
