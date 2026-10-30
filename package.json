@@ -42,8 +42,8 @@
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"agents": "^0.30.0",
-		"hono": "^4.13.13",
+		"agents": "^0.30.1",
+		"hono": "^4.13.14",
 		"jose": "^6.2.13",
 		"mailparser": "^3.12.4",
 		"zod": "^4.6.7"
