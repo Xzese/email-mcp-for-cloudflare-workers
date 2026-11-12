@@ -294,10 +294,11 @@ Dependabot checks npm packages and GitHub Actions weekly. Minor and patch update
 one pull request per ecosystem (`npm-routine` and `github-actions-routine`). Major updates remain
 individual pull requests and require manual review; the auto-merge workflow never selects them.
 
-The MCP SDK is installed automatically from `agents`' required peer dependency and recorded in
-`package-lock.json`. Keep `agents` as the source of its compatible SDK version; adding an independent
-`@modelcontextprotocol/sdk` dependency can let Dependabot select a version that Agents does not
-support. Agents updates can bring a compatible SDK update through npm's peer dependency resolution.
+This MCP server declares `@modelcontextprotocol/sdk` and `@modelcontextprotocol/server` as direct
+production dependencies. Agents 0.31.0 and later make these peer dependencies optional, so npm does
+not install them automatically. Keep both packages pinned to the versions required by the installed
+`agents` release and update them together with `agents` in `package.json` and `package-lock.json`.
+Agents 0.32.0 requires SDK 1.32.2 and server 2.4.0.
 The repository enables strict peer dependency checking in `.npmrc`; do not bypass conflicts with
 `--force` or `--legacy-peer-deps`.
 
