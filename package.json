@@ -32,7 +32,7 @@
 		"format:check": "oxfmt --check .",
 		"lint": "oxlint .",
 		"lint:fix": "oxlint --fix",
-		"dependencies:check": "npm ls agents @modelcontextprotocol/sdk",
+		"dependencies:check": "npm ls agents @modelcontextprotocol/sdk @modelcontextprotocol/server",
 		"build:check": "wrangler deploy --dry-run --outdir dist",
 		"start": "wrangler dev",
 		"test": "npm run type-check && node --test tests/*.test.ts",
@@ -42,10 +42,12 @@
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"agents": "^0.30.1",
-		"hono": "^4.13.14",
-		"jose": "^6.2.13",
-		"mailparser": "^3.12.4",
+		"@modelcontextprotocol/sdk": "1.32.2",
+		"@modelcontextprotocol/server": "2.4.0",
+		"agents": "^0.32.0",
+		"hono": "^4.13.16",
+		"jose": "^6.2.15",
+		"mailparser": "^3.14.1",
 		"zod": "^4.6.7"
 	},
 	"devDependencies": {
@@ -57,9 +59,9 @@
 		"wrangler": "^4.156.2"
 	},
 	"overrides": {
-		"body-parser": "2.3.0",
+		"body-parser": "2.4.0",
 		"brace-expansion": "5.0.8",
-		"fast-uri": "3.1.4"
+		"fast-uri": "3.1.9"
 	},
 	"engines": {
 		"node": ">=22.18.0"
